@@ -1,23 +1,460 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Mental Health Bot</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindCare - Mental Health Chatbot & Risk Predictor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            background: none;
+            font-size: 1rem;
+        }
+
+        .tab.active {
+            background: white;
+            border-bottom: 3px solid #4facfe;
+            color: #4facfe;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .content-section {
+            display: none;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .content-section.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .bot-message {
+            background: white;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .chat-input {
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+            background: white;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #chatInput:focus {
+            border-color: #4facfe;
+        }
+
+        #sendBtn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.2s;
+        }
+
+        #sendBtn:hover {
+            transform: scale(1.05);
+        }
+
+        .risk-form {
+            padding: 30px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 5px;
+            background: #e9ecef;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4facfe;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            font-weight: 600;
+            color: #4facfe;
+            min-width: 30px;
+        }
+
+        #analyzeBtn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #analyzeBtn:hover {
+            transform: scale(1.02);
+        }
+
+        .risk-result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .risk-low { background: #d4edda; color: #155724; border: 2px solid #c3e6cb; }
+        .risk-medium { background: #fff3cd; color: #856404; border: 2px solid #ffeaa7; }
+        .risk-high { background: #f8d7da; color: #721c24; border: 2px solid #f5c6cb; }
+
+        .disclaimer {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px;
+            font-size: 0.9rem;
+            color: #856404;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+                height: 95vh;
+                border-radius: 15px;
+            }
+            
+            .tabs {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
 </head>
 <body>
-
-<div class="chat-container">
-    <div class="header">🧠 Mental Health Assistant</div>
-
-    <div id="messages" class="messages"></div>
-
-    <div class="input-area">
-        <input id="input" placeholder="Talk about how you feel..." />
-        <button onclick="sendMessage()">Send</button>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 MindCare</h1>
+            <p>Mental Health Chatbot & Risk Predictor</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('chat')">💬 Chat</button>
+            <button class="tab" onclick="switchTab('risk')">⚠️ Risk Assessment</button>
+        </div>
+        
+        <!-- Chat Section -->
+        <div class="content-section active" id="chat-section">
+            <div class="chat-container" id="chatContainer">
+                <div class="message bot-message">
+                    <strong>MindCare:</strong> Hello! I'm here to listen and support you. How are you feeling today? You can also share anything on your mind. 💙
+                </div>
+            </div>
+            <div class="chat-input">
+                <div class="input-group">
+                    <input type="text" id="chatInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
+                    <button id="sendBtn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Risk Assessment Section -->
+        <div class="content-section" id="risk-section">
+            <div class="risk-form">
+                <div class="disclaimer">
+                    <strong>⚠️ Important:</strong> This is NOT a clinical diagnosis. Please consult a healthcare professional for proper assessment.
+                </div>
+                
+                <div class="form-group">
+                    <label>1. Sadness/Depression (past 2 weeks)</label>
+                    <div class="slider-container">
+                        <input type="range" id="sadness" min="0" max="10" value="0">
+                        <span class="slider-value" id="sadness-value">0</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>2. Anxiety/Worry</label>
+                    <div class="slider-container">
+                        <input type="range" id="anxiety" min="0" max="10" value="0">
+                        <span class="slider-value" id="anxiety-value">0</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>3. Sleep Quality (1-10)</label>
+                    <div class="slider-container">
+                        <input type="range" id="sleep" min="0" max="10" value="5">
+                        <span class="slider-value" id="sleep-value">5</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>4. Energy Levels</label>
+                    <div class="slider-container">
+                        <input type="range" id="energy" min="0" max="10" value="5">
+                        <span class="slider-value" id="energy-value">5</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>5. Thoughts of self-harm (0=none, 10=constant)</label>
+                    <div class="slider-container">
+                        <input type="range" id="selfharm" min="0" max="10" value="0">
+                        <span class="slider-value" id="selfharm-value">0</span>
+                    </div>
+                </div>
+                
+                <button id="analyzeBtn" onclick="analyzeRisk()">🔍 Analyze My Risk</button>
+                <div id="riskResult" class="risk-result" style="display: none;"></div>
+            </div>
+        </div>
     </div>
-</div>
 
-<script src="/static/script.js"></script>
+    <script>
+        let currentTab = 'chat';
 
+        // Tab switching
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + '-section').classList.add('active');
+        }
+
+        // Chat functionality
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            input.value = '';
+            
+            setTimeout(() => {
+                const responses = [
+                    "Thank you for sharing. I'm here to listen. How long have you been feeling this way?",
+                    "That sounds really tough. Have you been able to talk to anyone else about this?",
+                    "It's brave of you to share this. Would you like some coping strategies?",
+                    "I hear you. Sometimes breathing exercises can help. Would you like to try one?",
+                    "You're not alone in this. Have you considered speaking with a professional?",
+                    "Thank you for trusting me. What would help you feel better right now?",
+                    "I'm sorry you're going through this. Small steps can make a big difference.",
+                    "Your feelings are valid. Have you tried any self-care activities recently?"
+                ];
+                
+                const urgentResponses = [
+                    "This sounds very serious. Please contact emergency services immediately (911) or a crisis hotline.",
+                    "Your safety is most important. Please reach out to a trusted person or professional right now.",
+                    "I care about you. Please call a crisis hotline: US: 988, UK: 116 123, AU: 13 11 14"
+                ];
+                
+                const botResponse = message.toLowerCase().includes('hurt myself') || 
+                                  message.toLowerCase().includes('suicide') ||
+                                  message.toLowerCase().includes('kill myself') ? 
+                                  urgentResponses[Math.floor(Math.random() * urgentResponses.length)] :
+                                  responses[Math.floor(Math.random() * responses.length)];
+                
+                addMessage(botResponse, 'bot');
+            }, 1000);
+        }
+
+        function addMessage(text, sender) {
+            const container = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.innerHTML = sender === 'user' ? 
+                `<strong>You:</strong> ${text}` : 
+                `<strong>MindCare:</strong> ${text}`;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Risk sliders
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            const valueSpan = document.getElementById(slider.id + '-value');
+            slider.addEventListener('input', () => {
+                valueSpan.textContent = slider.value;
+            });
+        });
+
+        // Risk analysis
+        function analyzeRisk() {
+            const scores = {
+                sadness: parseInt(document.getElementById('sadness').value),
+                anxiety: parseInt(document.getElementById('anxiety').value),
+                sleep: parseInt(document.getElementById('sleep').value),
+                energy: parseInt(document.getElementById('energy').value),
+                selfharm: parseInt(document.getElementById('selfharm').value)
+            };
+
+            const total = scores.sadness + scores.anxiety + (10 - scores.sleep) + (10 - scores.energy) + scores.selfharm;
+            const riskLevel = total > 25 ? 'high' : total > 15 ? 'medium' : 'low';
+            
+            const resultDiv = document.getElementById('riskResult');
+            resultDiv.className = `risk-result risk-${riskLevel}`;
+            
+            let message = '';
+            if (riskLevel === 'high') {
+                message = `
+                    <h3>🚨 HIGH RISK</h3>
+                    <p>Your score: ${total}/50</p>
+                    <p><strong>Immediate Action Required:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Call emergency services: <strong>911</strong></li>
+                        <li>Crisis hotline: <strong>988</strong> (US)</li>
+                        <li>Talk to someone you trust</li>
+                    </ul>
+                `;
+            } else if (riskLevel === 'medium') {
+                message = `
+                    <h3>⚠️ MODERATE RISK</h3>
+                    <p>Your score: ${total}/50</p>
+                    <p>Consider speaking with a mental health professional soon.</p>
+                    <p>Hotlines: 988 (US), 116 123 (UK), 13 11 14 (AU)</p>
+                `;
+            } else {
+                message = `
+                    <h3>✅ LOW RISK</h3>
+                    <p>Your score: ${total}/50</p>
+                    <p>Keep up good self-care practices!</p>
+                `;
+            }
+            
+            resultDiv.innerHTML = message;
+            resultDiv.style.display = 'block';
+        }
+    </script>
 </body>
 </html>
