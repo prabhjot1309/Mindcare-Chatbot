@@ -7,7 +7,7 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
 # API KEY
-groq_api_key = os.getenv("GROQ_API_KEY")
+groq_api_key = os.getenv("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")
 
 # LLM Setup
 llm = None
