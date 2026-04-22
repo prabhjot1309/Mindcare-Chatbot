@@ -6,28 +6,25 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
 # ================= API KEY =================
-# 🔴 REPLACE THIS WITH YOUR KEY (for local testing)
-GROQ_API_KEY = "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"
 
-# For deployment use:
+# 🔹 LOCAL TEST (use this)
+groq_api_key = "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"
+
+# 🔹 FOR DEPLOYMENT (uncomment this instead)
 # groq_api_key = os.getenv("GROQ_API_KEY")
-st.write("API KEY FOUND:", bool(groq_api_key))
 
-# UI
-st.set_page_config(page_title="Mental Health AI", page_icon="🧠")
-st.title("🧠 AI Mental Health Assistant")
 # ================= UI =================
 st.set_page_config(page_title="Mental Health AI", page_icon="🧠")
 st.title("🧠 AI Mental Health Assistant")
 
-st.write("API KEY FOUND:", bool(groq_api_key))  # debug
+# Debug
+st.write("API KEY FOUND:", bool(groq_api_key))
 
 # ================= CHAT =================
 user_input = st.text_input("Talk about how you're feeling:")
 
 if user_input:
 
-    # ---- LLM RESPONSE ----
     llm_response = ""
 
     if groq_api_key:
@@ -46,14 +43,13 @@ if user_input:
 
         except Exception as e:
             llm_response = f"❌ LLM Error: {e}"
-
     else:
         llm_response = "❌ API key not found"
 
-    # ---- RISK ANALYSIS ----
+    # ---- Risk ----
     risk = analyze_text(user_input)
 
-    # ---- OUTPUT ----
+    # ---- Output ----
     st.subheader("💬 AI Response")
     st.write(llm_response)
 
