@@ -1,43 +1,42 @@
-import streamlit as st
+from flask import Flask, render_template, request, jsonify
 from utils import analyze_text, predict_from_form
 
-st.set_page_config(page_title="Mental Health AI", page_icon="🧠")
+app = Flask(__name__)
 
-st.title("🧠 Mental Health AI Assistant")
+@app.route("/")
+def home():
+    return render_template("index.html")
 
-# ---------------- CHAT SECTION ----------------
-st.subheader("💬 Chat")
+@app.route("/chat", methods=["POST"])
+def chat():
+    user_input = request.json.get("question")
 
-user_input = st.text_input("Talk about how you're feeling:")
-
-if user_input:
+    # Chat analysis
     risk = analyze_text(user_input)
 
     if risk == "HIGH":
-        st.error("🔴 High Stress Detected")
-        st.write("You may be experiencing high stress. Consider talking to a professional.")
+        response = "You seem highly stressed. Consider talking to someone or a professional."
     elif risk == "MEDIUM":
-        st.warning("🟡 Moderate Stress")
-        st.write("You might be under stress. Try relaxation techniques and take breaks.")
+        response = "You may be under stress. Try taking breaks and relaxing."
     else:
-        st.success("🟢 Low Stress")
-        st.write("You seem okay. Keep maintaining a healthy routine.")
+        response = "You seem okay. Keep maintaining balance."
 
-# ---------------- FORM SECTION ----------------
-st.subheader("📊 Mental Health Prediction")
+    return jsonify({"answer": response})
 
-age = st.slider("Age", 18, 60)
-gender = st.selectbox("Gender", ["Male", "Female"])
-family_history = st.selectbox("Family History", ["Yes", "No"])
-work_interfere = st.selectbox(
-    "Work Interference",
-    ["Never", "Rarely", "Sometimes", "Often"]
-)
 
-if st.button("Predict"):
-    result = predict_from_form(age, gender, family_history, work_interfere)
+@app.route("/predict", methods=["POST"])
+def predict():
+    data = request.json
 
-    if result == "Needs Treatment":
-        st.error("⚠️ Needs Mental Health Support")
-    else:
-        st.success("✅ Low Risk")
+    result = predict_from_form(
+        int(data["age"]),
+        data["gender"],
+        data["family_history"],
+        data["work_interfere"]
+    )
+
+    return jsonify({"result": result})
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
