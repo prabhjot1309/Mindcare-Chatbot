@@ -8,7 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 # ================= API KEY =================
 # 🔴 REPLACE THIS WITH YOUR KEY (for local testing)
-groq_api_key = "YOUR_GROQ_API_KEY"
+groq_api_key = os.getenv("GROQ_API_KEY")"
 
 # For deployment use:
 # groq_api_key = os.getenv("GROQ_API_KEY")
