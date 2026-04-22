@@ -1,23 +1,28 @@
 import streamlit as st
 import os
-import traceback
 from datetime import datetime
-import pandas as pd
+from typing import Dict, List
+import time
 
-# Local imports (ensure these files exist)
+# Local utils
+from utils import (
+    analyze_sentiment, detect_crisis_keywords, calculate_risk_score,
+    generate_counseling_response, get_crisis_resources
+)
+
+# LLM Setup
 try:
-    from utils import analyze_text, predict_from_form
+    from langchain_groq import ChatGroq
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.output_parsers import StrOutputParser
+    LLM_AVAILABLE = True
 except ImportError:
-    st.error("❌ utils.py not found! Please create it.")
-    st.stop()
+    LLM_AVAILABLE = False
+    st.error("❌ Install dependencies: `pip install -r requirements.txt`")
 
-from langchain_groq import ChatGroq
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-
-# ================= CONFIG =================
+# Page config
 st.set_page_config(
-    page_title="🧠 MindCare AI - Mental Health Assistant", 
+    page_title="🧠 MindWell AI - Mental Health Companion",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -26,207 +31,220 @@ st.set_page_config(
 # Custom CSS
 st.markdown("""
 <style>
-    .main-header { font-size: 3rem; color: #4facfe; }
-    .risk-high { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
-    .risk-medium { background: linear-gradient(135deg, #ffd93d, #ffcc5c); }
-    .risk-low { background: linear-gradient(135deg, #a8e6cf, #88d8a3); }
-    .crisis-alert { animation: pulse 2s infinite; }
+    .main-header { 
+        font-size: 3.2rem; 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .crisis-alert {
+        background: linear-gradient(135deg, #ff6b6b, #ee5a24) !important;
+        animation: pulse 2s infinite;
+        border: 3px solid #dc3545;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(220,53,69,0.7); }
+        70% { box-shadow: 0 0 0 20px rgba(220,53,69,0); }
+        100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); }
+    }
+    .stTextInput > div > div > input {
+        border-radius: 25px !important;
+        border: 2px solid #e9ecef !important;
+        padding: 12px 20px !important;
+    }
+    .stButton > button {
+        border-radius: 25px !important;
+        height: 50px !important;
+        font-weight: 600 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= API KEY =================
+# Initialize LLM
 @st.cache_resource
 def init_llm():
-    """Initialize LLM with proper error handling"""
-    groq_api_key = os.getenv("GROQ_API_KEY")
-    
-    if not groq_api_key:
-        st.error("❌ **GROQ_API_KEY not found in environment variables!**")
-        st.info("Set it with: `streamlit run app.py --server.headless=true GROQ_API_KEY=your_key`")
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
         return None
     
     try:
         llm = ChatGroq(
-            api_key=groq_api_key,
+            api_key=api_key,
             model="llama3-8b-8192",
-            temperature=0.1,  # Lower for consistency
-            max_tokens=500
+            temperature=0.1,
+            max_tokens=400
         )
         
-        # Safety-focused prompt
         prompt = ChatPromptTemplate.from_template("""
-        You are MindCare AI, a compassionate mental health assistant. 
+        You are MindWell AI, a compassionate mental health assistant with 10+ years counseling experience.
         
-        IMPORTANT SAFETY RULES:
-        1. Always be empathetic and supportive
-        2. NEVER give medical diagnoses or prescriptions
-        3. If user mentions self-harm/suicide, IMMEDIATELY provide crisis resources
-        4. Always suggest professional help when appropriate
-        5. End with resources if risk seems high
+        CORE PRINCIPLES:
+        1. VALIDATE feelings: "I hear you", "That sounds really tough"
+        2. EMPATHY first: Acknowledge emotions before advice
+        3. CBT techniques: Challenge negative thoughts gently
+        4. NEVER diagnose or prescribe
+        5. CRISIS DETECTION: If suicide/self-harm mentioned → EMERGENCY RESOURCES
+        6. Always end positively with actionable steps
         
-        CRISIS KEYWORDS: suicide, self-harm, kill myself, hurt myself, end it all
+        User said: {input}
         
-        User: {input}
-        
-        Respond supportively:
+        Respond warmly and professionally (200-300 words):
         """)
         
-        chain = prompt | llm | StrOutputParser()
-        return chain
-        
-    except Exception as e:
-        st.error(f"❌ LLM initialization failed: {str(e)}")
+        return prompt | llm | StrOutputParser()
+    except:
         return None
 
-# ================= SIDEBAR RESOURCES =================
+# Sidebar - Crisis Resources
 with st.sidebar:
-    st.markdown("## 📞 **CRISIS RESOURCES**")
+    st.header("📞 **Emergency Help**")
     st.markdown("""
-    **Immediate Help:**
-    - **US**: 988 Suicide & Crisis Lifeline
-    - **UK**: 116 123 Samaritans  
-    - **Australia**: 13 11 14 Lifeline
+    **🌍 Global Crisis Lines:**
+    - **USA**: 988 (Suicide & Crisis Lifeline)
+    - **UK**: 116 123 (Samaritans)
+    - **Australia**: 13 11 14 (Lifeline)
     - **Canada**: 1-833-456-4566
+    - **India**: 9152987821 (iCall)
     
-    **This is NOT a substitute for professional care**
+    **💙 This AI is NOT a crisis service**
     """)
     
     st.markdown("---")
-    st.markdown("**🧠 Disclaimer**: AI analysis ≠ medical diagnosis")
+    st.caption("*Always seek professional help when needed*")
 
-# ================= MAIN UI =================
-st.markdown('<h1 class="main-header">🧠 MindCare AI</h1>', unsafe_allow_html=True)
-st.markdown("*Your compassionate mental health companion*")
+# Main Header
+st.markdown('<h1 class="main-header">🧠 MindWell AI</h1>', unsafe_allow_html=True)
+st.markdown("*Your compassionate mental health companion* 🔮")
 
-# Initialize session state
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-if "llm_chain" not in st.session_state:
-    st.session_state.llm_chain = init_llm()
+# Session State
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "llm" not in st.session_state:
+    st.session_state.llm = init_llm()
 
-# ================= CHAT SECTION =================
-st.markdown("---")
-col1, col2 = st.columns([3, 1])
+# Check LLM
+if not st.session_state.llm:
+    st.error("❌ **GROQ_API_KEY required!**")
+    st.info("`export GROQ_API_KEY=your_key_here`")
+    st.stop()
 
+# Chat Interface
+st.subheader("💬 **How are you feeling today?**")
+
+# Chat container
+chat_container = st.container()
+
+# Input
+col1, col2 = st.columns([4, 1])
 with col1:
-    st.subheader("💬 **Talk to me**")
-    user_input = st.text_input(
-        "How are you feeling today?",
-        placeholder="I'm feeling overwhelmed at work...",
-        key="chat_input"
-    )
-
+    user_input = st.text_input("", key="user_input", label_visibility="collapsed")
 with col2:
-    if st.button("✨ Analyze", type="primary"):
-        st.session_state.analyze_clicked = True
+    analyze_btn = st.button("✨ Send", use_container_width=True)
 
-# Process chat
-if user_input and st.session_state.llm_chain:
-    with st.spinner("MindCare is listening..."):
-        try:
-            # Get AI response
-            response = st.session_state.llm_chain.invoke({"input": user_input})
-            
-            # Risk analysis
-            risk_score = analyze_text(user_input)
-            risk_label = "HIGH" if risk_score > 0.7 else "MEDIUM" if risk_score > 0.4 else "LOW"
-            
-            # Store in history
-            st.session_state.chat_history.append({
-                "timestamp": datetime.now().strftime("%H:%M"),
-                "user": user_input,
-                "ai": response,
-                "risk": risk_label,
-                "risk_score": risk_score
-            })
-            
-            # Display response
-            st.markdown("### 🤖 **MindCare's Response**")
-            st.write(response)
-            
-            # Risk display
-            st.markdown("### 📊 **Risk Assessment**")
-            risk_emoji = "🔴" if risk_label == "HIGH" else "🟡" if risk_label == "MEDIUM" else "🟢"
-            
-            if risk_label == "HIGH":
-                st.markdown(f"""
-                <div class="risk-high crisis-alert">
-                    <h3>{risk_emoji} **HIGH RISK DETECTED**</h3>
-                    <p><strong>Please contact emergency services immediately!</strong></p>
-                </div>
-                """, unsafe_allow_html=True)
-            elif risk_label == "MEDIUM":
-                st.warning(f"{risk_emoji} **Moderate Risk** - Consider professional support")
-            else:
-                st.success(f"{risk_emoji} **Low Risk** - Keep up self-care!")
+# Process input
+if analyze_btn and user_input:
+    with st.spinner("Analyzing your feelings..."):
+        # NLP Analysis
+        sentiment = analyze_sentiment(user_input)
+        crisis_detected = detect_crisis_keywords(user_input)
+        risk_score = calculate_risk_score(user_input)
+        
+        # LLM Response
+        llm_response = generate_counseling_response(
+            st.session_state.llm, user_input, sentiment, risk_score
+        )
+        
+        # Store message
+        msg = {
+            "role": "user",
+            "content": user_input,
+            "sentiment": sentiment,
+            "risk": risk_score,
+            "timestamp": datetime.now().strftime("%H:%M"),
+            "crisis": crisis_detected
+        }
+        st.session_state.messages.append(msg)
+        
+        ai_msg = {
+            "role": "assistant",
+            "content": llm_response,
+            "risk": risk_score,
+            "timestamp": datetime.now().strftime("%H:%M")
+        }
+        st.session_state.messages.append(ai_msg)
+
+# Display chat history
+with chat_container:
+    for msg in st.session_state.messages[-10:]:  # Last 10 messages
+        if msg["role"] == "user":
+            with st.chat_message("user"):
+                st.write(f"**You** ({msg['timestamp']}):")
+                st.write(msg["content"])
                 
-        except Exception as e:
-            st.error(f"❌ Error processing request: {str(e)}")
-            st.error("Please try again or contact support")
+                # Risk indicator
+                risk_color = "🔴" if msg["risk"] > 0.7 else "🟡" if msg["risk"] > 0.4 else "🟢"
+                st.caption(f"💭 Mood: {msg['sentiment']} | Risk: {risk_color} {msg['risk']:.1%}")
+                
+        else:  # assistant
+            with st.chat_message("assistant"):
+                st.write(f"**MindWell AI** ({msg['timestamp']}):")
+                st.write(msg["content"])
+                
+                # Special crisis handling
+                if msg["risk"] > 0.7:
+                    st.error("🚨 **CRISIS DETECTED**")
+                    st.markdown(get_crisis_resources())
+                    st.balloons()  # Attention grabber
 
-# Chat history
-if st.session_state.chat_history:
-    st.markdown("---")
-    st.subheader("📜 **Conversation History**")
-    
-    for chat in st.session_state.chat_history[-5:]:  # Last 5
-        with st.expander(f"**{chat['timestamp']}** - Risk: {chat['risk']}"):
-            st.write(f"**You:** {chat['user']}")
-            st.write(f"**MindCare:** {chat['ai']}")
-
-# ================= FORM SECTION =================
+# Quick Assessment Form
 st.markdown("---")
-st.subheader("📋 **Quick Risk Assessment**")
+st.subheader("📊 **Quick Mood Check**")
 
-form_col1, form_col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
+with col1:
+    mood = st.slider("😊 Current mood", 1, 10, 5)
+with col2:
+    anxiety = st.slider("😰 Anxiety level", 1, 10, 3)
+with col3:
+    sleep = st.slider("😴 Sleep quality", 1, 10, 6)
 
-with form_col1:
-    age = st.slider("👤 Age", 13, 80, 25)
-    gender = st.selectbox("⚧️ Gender", ["Male", "Female", "Non-binary", "Prefer not to say"])
-    family_history = st.selectbox("👨‍👩‍👧 Family history of mental health issues?", ["No", "Yes"])
+if st.button("🔍 **Assess My Risk**", use_container_width=True):
+    quick_risk = (10-mood + anxiety + (10-sleep)) / 30
+    risk_label = "HIGH" if quick_risk > 0.6 else "MEDIUM" if quick_risk > 0.3 else "LOW"
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if risk_label == "HIGH":
+            st.error(f"🚨 **HIGH RISK** ({quick_risk:.0%})")
+        elif risk_label == "MEDIUM":
+            st.warning(f"⚠️ **MEDIUM RISK** ({quick_risk:.0%})")
+        else:
+            st.success(f"✅ **LOW RISK** ({quick_risk:.0%})")
+    
+    with col2:
+        st.info("**Next Steps:**")
+        if risk_label == "HIGH":
+            st.markdown(get_crisis_resources())
+        else:
+            st.write("- 🧘 Practice deep breathing")
+            st.write("- 📞 Talk to a trusted friend")
+            st.write("- 💤 Prioritize sleep")
 
-with form_col2:
-    work_interfere = st.selectbox(
-        "💼 Does mental health interfere with work/studies?",
-        ["Never", "Rarely", "Sometimes", "Often", "Always"]
-    )
-    sleep_quality = st.slider("😴 Sleep quality (1-10)", 1, 10, 5)
-    mood_score = st.slider("😊 Current mood (1-10)", 1, 10, 5)
-
-if st.button("🔍 **Predict Risk Level**", type="secondary", use_container_width=True):
-    try:
-        with st.spinner("Analyzing..."):
-            # Enhanced prediction with more features
-            result = predict_from_form(
-                age, gender, family_history, work_interfere,
-                sleep_quality=sleep_quality, mood_score=mood_score
-            )
-            
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col2:
-                if "HIGH" in result or "Treatment" in result:
-                    st.error("🚨 **HIGH RISK** - Please seek professional help immediately")
-                    st.info("**Hotlines:** 988 (US) | 116 123 (UK) | 13 11 14 (AU)")
-                elif "MEDIUM" in result:
-                    st.warning("⚠️ **Moderate Risk** - Consider talking to a professional")
-                else:
-                    st.success("✅ **Low Risk** - Continue self-care practices")
-                    
-                st.write(f"**Prediction:** {result}")
-                
-    except Exception as e:
-        st.error(f"❌ Prediction error: {str(e)}")
-
-# ================= FOOTER =================
+# Footer
 st.markdown("---")
 st.markdown("""
-<div style='text-align: center; color: #6c757d; padding: 20px;'>
-    <p><strong>⚠️ Important:</strong> This AI is <em>NOT</em> a substitute for professional medical advice.</p>
-    <p>Always consult qualified healthcare professionals for diagnosis and treatment.</p>
+<div style='text-align: center; padding: 2rem; color: #6b7280;'>
+    <h3>⚠️ **Important Disclaimer**</h3>
+    <p><strong>This AI is NOT a substitute for professional mental health care.</strong></p>
+    <p>For emergencies, call your local crisis hotline immediately.</p>
+    <p>Made with ❤️ for mental wellness awareness</p>
 </div>
 """, unsafe_allow_html=True)
 
-# Clear chat button
-if st.button("🗑️ Clear Chat History"):
-    st.session_state.chat_history = []
+# Clear chat
+if st.button("🗑️ **Clear Chat**", use_container_width=True):
+    st.session_state.messages = []
     st.rerun()
