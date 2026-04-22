@@ -5,7 +5,7 @@ from datetime import datetime
 # Local utils
 from utils import (
     analyze_sentiment, detect_crisis_keywords, calculate_risk_score,
-    generate_counseling_response, get_crisis_resources
+    generate_counseling_response
 )
 
 # LLM Setup
@@ -172,7 +172,7 @@ with st.sidebar:
         quick_risk = ((10 - mood) + anx + (10 - sleep)) / 30.0
         if quick_risk > 0.6:
             st.error(f"🚨 High concern level ({quick_risk:.0%})")
-            st.markdown(get_crisis_resources())
+            st.markdown("Please reach out to a crisis helpline immediately. You are not alone.")
         elif quick_risk > 0.35:
             st.warning(f"⚠️ Moderate concern ({quick_risk:.0%})")
             st.markdown("**Suggestions:** Talk to someone you trust, try a breathing exercise, and aim for 7–8 hours of sleep.")
@@ -232,7 +232,6 @@ with chat_area:
                             'Please reach out to a crisis helpline immediately — you are not alone.</div>',
                             unsafe_allow_html=True
                         )
-                        st.markdown(get_crisis_resources())
                     st.write(msg["content"])
                     st.caption(msg["timestamp"])
 
