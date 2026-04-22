@@ -1,11 +1,13 @@
-🧠 MindCare Chatbot – AI Mental Health Prediction System
+#🧠 MindCare Chatbot – AI Mental Health Prediction System
+
+
 🚀 Overview
 
 MindCare Chatbot is an AI-powered web application that analyzes user input and predicts mental health conditions using machine learning. It also provides conversational support through an interactive chatbot interface.
 
 This project combines ML-based prediction + chatbot interaction into a single system.
 
-🎯 Key Features
+#🎯 Key Features
 🧠 Mental health prediction using trained ML model
 💬 Chatbot-based interaction system
 📊 Input-based prediction via form & text analysis
@@ -14,23 +16,14 @@ This project combines ML-based prediction + chatbot interaction into a single sy
 📁 Dataset-driven insights (survey.csv)
 🏗️ Tech Stack
 
-Frontend
+Frontend: HTML 
+Backend: Python (Flask)
 
-HTML 
-
-Backend
-
-Python (Flask)
-
-Machine Learning
-
-Scikit-learn
-Pandas, NumPy
-TF-IDF / text preprocessing
+Machine Learning: Scikit-learn , Pandas , NumPy , TF-IDF / text preprocessing
 
 
 
-📂 Project Structure (REAL – based on your repo)
+#📂 Project Structure (REAL – based on your repo)
 Mindcare-Chatbot/
 │── app.py                         # Main Flask app
 │── utils.py                       # Prediction + processing logic
