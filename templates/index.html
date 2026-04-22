@@ -3,217 +3,513 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindCare - Mental Health Chatbot & Risk Predictor</title>
+    <title>MindCare – Mental Health Companion</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:wght@700;900&display=swap" rel="stylesheet">
     <style>
-        <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindCare - Mental Health Chatbot & Risk Predictor</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-</head>
+        /* ── Reset & Variables ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:          #0d1117;
+            --surface:     #161b22;
+            --surface-2:   #1f2937;
+            --border:      #2d3748;
+            --accent:      #6ee7b7;
+            --accent-dim:  #064e3b;
+            --danger:      #f87171;
+            --danger-dim:  #450a0a;
+            --text:        #e2e8f0;
+            --text-muted:  #6b7280;
+            --user-bubble: #1e3a5f;
+            --bot-bubble:  #1a2e1f;
+            --radius:      14px;
+            --font-display: 'Fraunces', Georgia, serif;
+            --font-body:    'DM Sans', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px 40px;
+        }
+
+        /* ── Header ── */
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+            animation: fadeDown 0.5s ease both;
+        }
+        .header h1 {
+            font-family: var(--font-display);
+            font-size: 2.6rem;
+            font-weight: 900;
+            color: var(--accent);
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-top: 4px;
+        }
+
+        /* ── Main card ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 720px;
+            overflow: hidden;
+            animation: fadeUp 0.5s ease 0.1s both;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+        .tab {
+            flex: 1;
+            padding: 14px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.2s, background 0.2s;
+        }
+        .tab:hover { background: var(--surface-2); }
+        .tab.active {
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+            background: var(--surface-2);
+        }
+
+        /* ── Sections ── */
+        .section { display: none; }
+        .section.active { display: flex; flex-direction: column; }
+
+        /* ── Chat ── */
+        #chat-messages {
+            height: 420px;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+        #chat-messages::-webkit-scrollbar { width: 4px; }
+        #chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        .bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-size: 0.93rem;
+            line-height: 1.55;
+            animation: fadeUp 0.25s ease both;
+        }
+        .bubble.user {
+            align-self: flex-end;
+            background: var(--user-bubble);
+            border-bottom-right-radius: 4px;
+            color: #bfdbfe;
+        }
+        .bubble.bot {
+            align-self: flex-start;
+            background: var(--bot-bubble);
+            border-bottom-left-radius: 4px;
+            color: #bbf7d0;
+        }
+        .bubble.bot.crisis {
+            background: var(--danger-dim);
+            border: 1px solid var(--danger);
+            color: #fecaca;
+        }
+        .bubble .sender {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            opacity: 0.6;
+            margin-bottom: 4px;
+        }
+        .bubble.typing span {
+            display: inline-block;
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: blink 1.2s infinite;
+            margin: 0 2px;
+        }
+        .bubble.typing span:nth-child(2) { animation-delay: 0.2s; }
+        .bubble.typing span:nth-child(3) { animation-delay: 0.4s; }
+
+        /* ── Chat input ── */
+        .chat-input-row {
+            display: flex;
+            gap: 10px;
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .chat-input-row input {
+            flex: 1;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 25px;
+            padding: 11px 18px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 0.93rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .chat-input-row input:focus { border-color: var(--accent); }
+        .chat-input-row input::placeholder { color: var(--text-muted); }
+        .chat-input-row button {
+            background: var(--accent);
+            color: #0d1117;
+            border: none;
+            border-radius: 25px;
+            padding: 11px 22px;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .chat-input-row button:hover { opacity: 0.85; transform: translateY(-1px); }
+        .chat-input-row button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        /* ── Risk Assessment ── */
+        .risk-form {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .disclaimer {
+            background: #1c1a0e;
+            border: 1px solid #78350f;
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            color: #fbbf24;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: var(--text);
+        }
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .slider-row input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 5px;
+            border-radius: 5px;
+            background: var(--surface-2);
+            outline: none;
+            cursor: pointer;
+        }
+        .slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .slider-row input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        .slider-value {
+            min-width: 28px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--accent);
+            font-size: 1rem;
+        }
+        .analyze-btn {
+            background: var(--accent);
+            color: #0d1117;
+            border: none;
+            border-radius: var(--radius);
+            padding: 13px;
+            font-family: var(--font-body);
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .analyze-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+
+        /* ── Risk result ── */
+        .risk-result {
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            font-size: 0.92rem;
+            line-height: 1.6;
+            display: none;
+            animation: fadeUp 0.3s ease both;
+        }
+        .risk-result.low    { background: #0f291a; border: 1px solid #166534; color: #bbf7d0; }
+        .risk-result.medium { background: #1c1a0e; border: 1px solid #854d0e; color: #fde68a; }
+        .risk-result.high   { background: var(--danger-dim); border: 1px solid var(--danger); color: #fecaca; }
+        .risk-result h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 8px; }
+        .risk-result ul { padding-left: 18px; margin-top: 6px; }
+        .risk-result ul li { margin-bottom: 4px; }
+
+        /* ── Animations ── */
+        @keyframes fadeUp   { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeDown { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes blink    { 0%,80%,100% { opacity:0.2; } 40% { opacity:1; } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🧠 MindCare</h1>
-            <p>Mental Health Chatbot & Risk Predictor</p>
-        </div>
-        
+
+    <div class="header">
+        <h1>🧠 MindCare</h1>
+        <p>Mental Health Chatbot &amp; Risk Predictor</p>
+    </div>
+
+    <div class="card">
+        <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('chat')">💬 Chat</button>
-            <button class="tab" onclick="switchTab('risk')">⚠️ Risk Assessment</button>
+            <button class="tab active" data-tab="chat"   onclick="switchTab('chat',   this)">💬 Chat</button>
+            <button class="tab"        data-tab="risk"   onclick="switchTab('risk',   this)">⚠️ Risk Assessment</button>
         </div>
-        
-        <!-- Chat Section -->
-        <div class="content-section active" id="chat-section">
-            <div class="chat-container" id="chatContainer">
-                <div class="message bot-message">
-                    <strong>MindCare:</strong> Hello! I'm here to listen and support you. How are you feeling today? You can also share anything on your mind. 💙
+
+        <!-- ── CHAT SECTION ── -->
+        <div class="section active" id="chat-section">
+            <div id="chat-messages">
+                <div class="bubble bot">
+                    <div class="sender">MindCare</div>
+                    Hello! I'm here to listen and support you. How are you feeling today? 💙
                 </div>
             </div>
-            <div class="chat-input">
-                <div class="input-group">
-                    <input type="text" id="chatInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
-                    <button id="sendBtn" onclick="sendMessage()">Send</button>
-                </div>
+            <div class="chat-input-row">
+                <input
+                    type="text"
+                    id="chatInput"
+                    placeholder="Share how you're feeling..."
+                    onkeydown="if(event.key==='Enter') sendMessage()"
+                    autocomplete="off"
+                />
+                <button id="sendBtn" onclick="sendMessage()">Send</button>
             </div>
         </div>
-        
-        <!-- Risk Assessment Section -->
-        <div class="content-section" id="risk-section">
+
+        <!-- ── RISK SECTION ── -->
+        <div class="section" id="risk-section">
             <div class="risk-form">
                 <div class="disclaimer">
-                    <strong>⚠️ Important:</strong> This is NOT a clinical diagnosis. Please consult a healthcare professional for proper assessment.
+                    ⚠️ <strong>Important:</strong> This is NOT a clinical diagnosis.
+                    Please consult a healthcare professional for proper assessment.
                 </div>
-                
+
                 <div class="form-group">
-                    <label>1. Sadness/Depression (past 2 weeks)</label>
-                    <div class="slider-container">
-                        <input type="range" id="sadness" min="0" max="10" value="0">
-                        <span class="slider-value" id="sadness-value">0</span>
+                    <label>1. Sadness / Depression (past 2 weeks)</label>
+                    <div class="slider-row">
+                        <input type="range" id="sadness" min="0" max="10" value="0" oninput="updateSlider('sadness')">
+                        <span class="slider-value" id="sadness-val">0</span>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
-                    <label>2. Anxiety/Worry</label>
-                    <div class="slider-container">
-                        <input type="range" id="anxiety" min="0" max="10" value="0">
-                        <span class="slider-value" id="anxiety-value">0</span>
+                    <label>2. Anxiety / Worry</label>
+                    <div class="slider-row">
+                        <input type="range" id="anxiety" min="0" max="10" value="0" oninput="updateSlider('anxiety')">
+                        <span class="slider-value" id="anxiety-val">0</span>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
-                    <label>3. Sleep Quality (1-10)</label>
-                    <div class="slider-container">
-                        <input type="range" id="sleep" min="0" max="10" value="5">
-                        <span class="slider-value" id="sleep-value">5</span>
+                    <label>3. Sleep Quality <span style="color:var(--text-muted)">(0 = terrible, 10 = excellent)</span></label>
+                    <div class="slider-row">
+                        <input type="range" id="sleep" min="0" max="10" value="5" oninput="updateSlider('sleep')">
+                        <span class="slider-value" id="sleep-val">5</span>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
-                    <label>4. Energy Levels</label>
-                    <div class="slider-container">
-                        <input type="range" id="energy" min="0" max="10" value="5">
-                        <span class="slider-value" id="energy-value">5</span>
+                    <label>4. Energy Levels <span style="color:var(--text-muted)">(0 = exhausted, 10 = high)</span></label>
+                    <div class="slider-row">
+                        <input type="range" id="energy" min="0" max="10" value="5" oninput="updateSlider('energy')">
+                        <span class="slider-value" id="energy-val">5</span>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
-                    <label>5. Thoughts of self-harm (0=none, 10=constant)</label>
-                    <div class="slider-container">
-                        <input type="range" id="selfharm" min="0" max="10" value="0">
-                        <span class="slider-value" id="selfharm-value">0</span>
+                    <label>5. Thoughts of self-harm <span style="color:var(--text-muted)">(0 = none, 10 = constant)</span></label>
+                    <div class="slider-row">
+                        <input type="range" id="selfharm" min="0" max="10" value="0" oninput="updateSlider('selfharm')">
+                        <span class="slider-value" id="selfharm-val">0</span>
                     </div>
                 </div>
-                
-                <button id="analyzeBtn" onclick="analyzeRisk()">🔍 Analyze My Risk</button>
-                <div id="riskResult" class="risk-result" style="display: none;"></div>
+
+                <button class="analyze-btn" onclick="analyzeRisk()">🔍 Analyze My Risk</button>
+                <div class="risk-result" id="riskResult"></div>
             </div>
         </div>
     </div>
 
     <script>
-        let currentTab = 'chat';
-
-        // Tab switching
-        function switchTab(tab) {
-            currentTab = tab;
+        // ── Tab switching ──
+        function switchTab(tabName, btn) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(tab + '-section').classList.add('active');
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabName + '-section').classList.add('active');
         }
 
-        // Chat functionality
-        function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const message = input.value.trim();
-            if (!message) return;
-
-            addMessage(message, 'user');
-            input.value = '';
-            
-            setTimeout(() => {
-                const responses = [
-                    "Thank you for sharing. I'm here to listen. How long have you been feeling this way?",
-                    "That sounds really tough. Have you been able to talk to anyone else about this?",
-                    "It's brave of you to share this. Would you like some coping strategies?",
-                    "I hear you. Sometimes breathing exercises can help. Would you like to try one?",
-                    "You're not alone in this. Have you considered speaking with a professional?",
-                    "Thank you for trusting me. What would help you feel better right now?",
-                    "I'm sorry you're going through this. Small steps can make a big difference.",
-                    "Your feelings are valid. Have you tried any self-care activities recently?"
-                ];
-                
-                const urgentResponses = [
-                    "This sounds very serious. Please contact emergency services immediately (911) or a crisis hotline.",
-                    "Your safety is most important. Please reach out to a trusted person or professional right now.",
-                    "I care about you. Please call a crisis hotline: US: 988, UK: 116 123, AU: 13 11 14"
-                ];
-                
-                const botResponse = message.toLowerCase().includes('hurt myself') || 
-                                  message.toLowerCase().includes('suicide') ||
-                                  message.toLowerCase().includes('kill myself') ? 
-                                  urgentResponses[Math.floor(Math.random() * urgentResponses.length)] :
-                                  responses[Math.floor(Math.random() * responses.length)];
-                
-                addMessage(botResponse, 'bot');
-            }, 1000);
+        // ── Slider display ──
+        function updateSlider(id) {
+            document.getElementById(id + '-val').textContent =
+                document.getElementById(id).value;
         }
 
-        function addMessage(text, sender) {
-            const container = document.getElementById('chatContainer');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}-message`;
-            messageDiv.innerHTML = sender === 'user' ? 
-                `<strong>You:</strong> ${text}` : 
-                `<strong>MindCare:</strong> ${text}`;
-            container.appendChild(messageDiv);
+        // ── Crisis keyword check ──
+        const CRISIS_WORDS = [
+            'suicide', 'kill myself', 'end my life', 'want to die',
+            'hurt myself', 'self harm', 'self-harm', 'cut myself', 'overdose'
+        ];
+        function isCrisis(text) {
+            const t = text.toLowerCase();
+            return CRISIS_WORDS.some(w => t.includes(w));
+        }
+
+        // ── Add bubble to chat ──
+        function addBubble(text, sender, crisis = false) {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `bubble ${sender}${crisis ? ' crisis' : ''}`;
+            div.innerHTML = `<div class="sender">${sender === 'user' ? 'You' : 'MindCare'}</div>${text}`;
+            container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
 
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
+        // ── Typing indicator ──
+        function showTyping() {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = 'bubble bot typing';
+            div.id = 'typing-indicator';
+            div.innerHTML = '<span></span><span></span><span></span>';
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+        function hideTyping() {
+            const el = document.getElementById('typing-indicator');
+            if (el) el.remove();
+        }
+
+        // ── Send message ──
+        async function sendMessage() {
+            const input   = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addBubble(message, 'user');
+            input.value = '';
+            sendBtn.disabled = true;
+            showTyping();
+
+            // Crisis short-circuit — don't even hit the server
+            if (isCrisis(message)) {
+                hideTyping();
+                addBubble(
+                    'I\'m really concerned about what you\'ve shared. Please reach out to a crisis helpline right now — trained counsellors are available 24/7.<br><br>' +
+                    '<strong>🇮🇳 India:</strong> 9152987821 (iCall)<br>' +
+                    '<strong>🇺🇸 USA:</strong> 988<br>' +
+                    '<strong>🇬🇧 UK:</strong> 116 123<br>' +
+                    '<strong>🇦🇺 Australia:</strong> 13 11 14<br><br>' +
+                    'You are not alone. 💙',
+                    'bot', true
+                );
+                sendBtn.disabled = false;
+                return;
+            }
+
+            // Send to Flask /chat endpoint
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: message })
+                });
+
+                if (!res.ok) throw new Error('Server error');
+                const data = await res.json();
+                hideTyping();
+                addBubble(data.answer, 'bot');
+
+            } catch (err) {
+                hideTyping();
+                addBubble(
+                    'I\'m having trouble connecting right now. Please try again in a moment.',
+                    'bot'
+                );
+            } finally {
+                sendBtn.disabled = false;
+                input.focus();
             }
         }
 
-        // Risk sliders
-        document.querySelectorAll('input[type="range"]').forEach(slider => {
-            const valueSpan = document.getElementById(slider.id + '-value');
-            slider.addEventListener('input', () => {
-                valueSpan.textContent = slider.value;
-            });
-        });
-
-        // Risk analysis
+        // ── Risk analysis ──
         function analyzeRisk() {
-            const scores = {
-                sadness: parseInt(document.getElementById('sadness').value),
-                anxiety: parseInt(document.getElementById('anxiety').value),
-                sleep: parseInt(document.getElementById('sleep').value),
-                energy: parseInt(document.getElementById('energy').value),
-                selfharm: parseInt(document.getElementById('selfharm').value)
-            };
+            const sadness  = parseInt(document.getElementById('sadness').value);
+            const anxiety  = parseInt(document.getElementById('anxiety').value);
+            const sleep    = parseInt(document.getElementById('sleep').value);
+            const energy   = parseInt(document.getElementById('energy').value);
+            const selfharm = parseInt(document.getElementById('selfharm').value);
 
-            const total = scores.sadness + scores.anxiety + (10 - scores.sleep) + (10 - scores.energy) + scores.selfharm;
-            const riskLevel = total > 25 ? 'high' : total > 15 ? 'medium' : 'low';
-            
-            const resultDiv = document.getElementById('riskResult');
-            resultDiv.className = `risk-result risk-${riskLevel}`;
-            
-            let message = '';
-            if (riskLevel === 'high') {
-                message = `
-                    <h3>🚨 HIGH RISK</h3>
-                    <p>Your score: ${total}/50</p>
-                    <p><strong>Immediate Action Required:</strong></p>
-                    <ul style="text-align: left; display: inline-block;">
-                        <li>Call emergency services: <strong>911</strong></li>
-                        <li>Crisis hotline: <strong>988</strong> (US)</li>
-                        <li>Talk to someone you trust</li>
-                    </ul>
-                `;
-            } else if (riskLevel === 'medium') {
-                message = `
-                    <h3>⚠️ MODERATE RISK</h3>
-                    <p>Your score: ${total}/50</p>
-                    <p>Consider speaking with a mental health professional soon.</p>
-                    <p>Hotlines: 988 (US), 116 123 (UK), 13 11 14 (AU)</p>
-                `;
+            // Higher = worse: sadness+anxiety+inverted sleep+inverted energy+selfharm
+            const total = sadness + anxiety + (10 - sleep) + (10 - energy) + selfharm;
+            const level = total > 25 ? 'high' : total > 15 ? 'medium' : 'low';
+
+            const result = document.getElementById('riskResult');
+            result.className = `risk-result ${level}`;
+
+            if (level === 'high') {
+                result.innerHTML = `
+                    <h3>🚨 High Concern Level</h3>
+                    <p>Score: ${total}/50 — Your responses suggest significant distress.</p>
+                    <p>Please consider reaching out to a mental health professional as soon as possible.</p>
+                    <ul>
+                        <li>🇮🇳 <strong>India:</strong> 9152987821 (iCall)</li>
+                        <li>🇺🇸 <strong>USA:</strong> 988</li>
+                        <li>🇬🇧 <strong>UK:</strong> 116 123</li>
+                        <li>🇦🇺 <strong>Australia:</strong> 13 11 14</li>
+                    </ul>`;
+            } else if (level === 'medium') {
+                result.innerHTML = `
+                    <h3>⚠️ Moderate Concern</h3>
+                    <p>Score: ${total}/50 — You may benefit from speaking to a mental health professional soon.</p>
+                    <p>Try breathing exercises, journaling, or talking to someone you trust.</p>`;
             } else {
-                message = `
-                    <h3>✅ LOW RISK</h3>
-                    <p>Your score: ${total}/50</p>
-                    <p>Keep up good self-care practices!</p>
-                `;
+                result.innerHTML = `
+                    <h3>✅ Low Concern</h3>
+                    <p>Score: ${total}/50 — You seem to be managing well.</p>
+                    <p>Keep up your self-care habits — small daily practices make a big difference.</p>`;
             }
-            
-            resultDiv.innerHTML = message;
-            resultDiv.style.display = 'block';
+
+            result.style.display = 'block';
+            result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     </script>
 </body>
